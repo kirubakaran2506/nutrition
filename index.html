@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutriCalc — Personalized Diet Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --surface2: #1f1f1f;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0ede6;
+    --muted: #888;
+    --accent: #c8f54a;
+    --accent2: #a8e032;
+    --protein: #4a9eff;
+    --carbs: #4acf8f;
+    --fat: #ffb84a;
+    --danger: #ff6b6b;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grain */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  .page { position: relative; z-index: 1; }
+
+  /* ---- HEADER ---- */
+  header {
+    padding: 2rem 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+
+  .logo span { color: var(--text); font-style: italic; }
+
+  .header-tag {
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ---- HERO ---- */
+  .hero {
+    text-align: center;
+    padding: 5rem 2rem 4rem;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  .hero-eyebrow {
+    display: inline-block;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(200,245,74,0.08);
+    border: 1px solid rgba(200,245,74,0.2);
+    padding: 5px 14px;
+    border-radius: 100px;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.2rem;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero p {
+    font-size: 1rem;
+    color: var(--muted);
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  /* ---- FORM ---- */
+  .form-container {
+    max-width: 900px;
+    margin: 0 auto 5rem;
+    padding: 0 1.5rem;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    header { padding: 1.2rem; }
+    .hero { padding: 3rem 1.2rem 2.5rem; }
+  }
+
+  .field {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+    transition: border-color 0.2s;
+  }
+
+  .field:focus-within {
+    border-color: rgba(200,245,74,0.4);
+  }
+
+  .field label {
+    display: block;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+
+  .field input, .field select {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 500;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .field select option {
+    background: #1f1f1f;
+    color: var(--text);
+  }
+
+  .field-row { display: flex; align-items: center; gap: 8px; }
+  .field-row .unit {
+    font-size: 0.85rem;
+    color: var(--muted);
+    white-space: nowrap;
+    font-weight: 300;
+  }
+
+  .toggle-group {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  .toggle-btn {
+    flex: 1;
+    min-width: 100px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    padding: 0.75rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+    text-align: center;
+  }
+
+  .toggle-btn:hover { border-color: var(--border2); color: var(--text); }
+
+  .toggle-btn.active {
+    background: rgba(200,245,74,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .section-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    margin-bottom: 0.6rem;
+    margin-top: 0.4rem;
+  }
+
+  .calc-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #0d0d0d;
+    border: none;
+    border-radius: var(--radius);
+    padding: 1.1rem 2rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 1rem;
+    letter-spacing: 0.02em;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .calc-btn:hover { background: var(--accent2); transform: translateY(-1px); }
+  .calc-btn:active { transform: translateY(0); }
+
+  /* ---- RESULTS ---- */
+  #results {
+    display: none;
+    max-width: 900px;
+    margin: 0 auto 5rem;
+    padding: 0 1.5rem;
+    animation: fadeUp 0.4s ease;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .results-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.8rem;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+  }
+
+  .results-title span { color: var(--accent); }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 1.25rem;
+  }
+
+  @media (max-width: 600px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+  }
+
+  .stat-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+  }
+
+  .stat-value {
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  .stat-sub {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 4px;
+    font-weight: 300;
+  }
+
+  .macro-bars {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 1.4rem 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .macro-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 1rem;
+  }
+
+  .macro-row:last-child { margin-bottom: 0; }
+
+  .macro-name {
+    font-size: 0.8rem;
+    font-weight: 500;
+    width: 70px;
+    flex-shrink: 0;
+    color: var(--muted);
+  }
+
+  .bar-track {
+    flex: 1;
+    background: rgba(255,255,255,0.06);
+    border-radius: 100px;
+    height: 8px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 0.8s cubic-bezier(.16,1,.3,1);
+  }
+
+  .macro-info {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    width: 110px;
+    flex-shrink: 0;
+    justify-content: flex-end;
+  }
+
+  .macro-g {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .macro-pct {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  /* ---- MEAL PLAN ---- */
+  .meal-plan-section {
+    margin-top: 0.5rem;
+  }
+
+  .day-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 1rem;
+    scrollbar-width: none;
+  }
+
+  .day-tabs::-webkit-scrollbar { display: none; }
+
+  .day-tab {
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    padding: 7px 18px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+
+  .day-tab:hover { color: var(--text); }
+
+  .day-tab.active {
+    background: rgba(200,245,74,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .meals-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  @media (max-width: 600px) { .meals-grid { grid-template-columns: 1fr; } }
+
+  .meal-card {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 1.2rem 1.3rem;
+    transition: border-color 0.2s;
+  }
+
+  .meal-card:hover { border-color: rgba(200,245,74,0.2); }
+
+  .meal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.7rem;
+  }
+
+  .meal-tag {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(200,245,74,0.08);
+    border: 1px solid rgba(200,245,74,0.15);
+    padding: 3px 8px;
+    border-radius: 100px;
+  }
+
+  .meal-kcal {
+    font-size: 0.82rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .meal-name {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    line-height: 1.3;
+  }
+
+  .meal-desc {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.6;
+    font-weight: 300;
+    margin-bottom: 0.9rem;
+  }
+
+  .meal-macros {
+    display: flex;
+    gap: 14px;
+  }
+
+  .m-pill {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .m-pill strong {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* ---- TIPS ---- */
+  .tips-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 600px) { .tips-grid { grid-template-columns: 1fr; } }
+
+  .tip-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.2rem;
+  }
+
+  .tip-icon {
+    font-size: 1.3rem;
+    margin-bottom: 0.6rem;
+    display: block;
+  }
+
+  .tip-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+
+  .tip-text {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.6;
+    font-weight: 300;
+  }
+
+  /* misc */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1.5rem 0;
+  }
+
+  .results-section-title {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    margin-bottom: 0.8rem;
+  }
+
+  .bmr-note {
+    background: rgba(200,245,74,0.05);
+    border: 1px solid rgba(200,245,74,0.12);
+    border-radius: var(--radius-sm);
+    padding: 0.9rem 1.1rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 1.25rem;
+  }
+
+  .bmr-note strong { color: var(--accent); font-weight: 600; }
+
+  /* scroll hint */
+  .scroll-hint {
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 0.5rem;
+    font-weight: 300;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- Header -->
+<header>
+  <div class="logo">Nutri<span></span></div>
+  <div class="header-tag">Precision Nutrition Engine</div>
+</header>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-eyebrow">Science-backed · Personalized</div>
+  <h1>Your body.<br>Your <em>exact</em> numbers.</h1>
+  <p>Enter your stats and goals — get a clinically accurate calorie target, macro breakdown, and a full 7-day meal plan tailored to you.</p>
+</div>
+
+<!-- Form -->
+<div class="form-container">
+
+  <p class="section-label">Basic Info</p>
+  <div class="form-grid">
+    <div class="field">
+      <label>Age</label>
+      <div class="field-row">
+        <input type="number" id="age" placeholder="25" min="14" max="100">
+        <span class="unit">years</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Biological Sex</label>
+      <select id="sex">
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Weight</label>
+      <div class="field-row">
+        <input type="number" id="weight" placeholder="75" min="30" max="300">
+        <span class="unit">kg</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Height</label>
+      <div class="field-row">
+        <input type="number" id="height" placeholder="175" min="100" max="250">
+        <span class="unit">cm</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="section-label">Activity Level</p>
+  <div class="toggle-group" id="activity-group">
+    <button class="toggle-btn" data-val="1.2">Sedentary</button>
+    <button class="toggle-btn" data-val="1.375">Lightly active</button>
+    <button class="toggle-btn active" data-val="1.55">Moderately active</button>
+    <button class="toggle-btn" data-val="1.725">Very active</button>
+    <button class="toggle-btn" data-val="1.9">Athlete</button>
+  </div>
+
+  <p class="section-label">Goal</p>
+  <div class="toggle-group" id="goal-group">
+    <button class="toggle-btn active" data-val="lose">Lose fat</button>
+    <button class="toggle-btn" data-val="maintain">Maintain</button>
+    <button class="toggle-btn" data-val="gain">Build muscle</button>
+    <button class="toggle-btn" data-val="recomp">Recomposition</button>
+  </div>
+
+  <p class="section-label">Diet Type</p>
+  <div class="toggle-group" id="diet-group">
+    <button class="toggle-btn active" data-val="non-veg">Non-vegetarian</button>
+    <button class="toggle-btn" data-val="vegetarian">Vegetarian</button>
+    <button class="toggle-btn" data-val="vegan">Vegan</button>
+    <button class="toggle-btn" data-val="eggetarian">Eggetarian</button>
+  </div>
+
+  <button class="calc-btn" onclick="calculate()">Calculate My Plan →</button>
+  <p class="scroll-hint">Results appear below ↓</p>
+</div>
+
+<!-- Results -->
+<div id="results">
+  <p class="results-section-title">Your Nutrition Profile</p>
+  <div class="results-title">Plan for <span id="r-name">you</span></div>
+
+  <div class="bmr-note" id="bmr-note"></div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Daily Calories</div>
+      <div class="stat-value" id="r-kcal" style="color:var(--accent)">—</div>
+      <div class="stat-sub">kcal / day</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Protein</div>
+      <div class="stat-value" id="r-protein" style="color:var(--protein)">—</div>
+      <div class="stat-sub">grams / day</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Carbs</div>
+      <div class="stat-value" id="r-carbs" style="color:var(--carbs)">—</div>
+      <div class="stat-sub">grams / day</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Fats</div>
+      <div class="stat-value" id="r-fats" style="color:var(--fat)">—</div>
+      <div class="stat-sub">grams / day</div>
+    </div>
+  </div>
+
+  <div class="macro-bars">
+    <p class="results-section-title" style="margin-bottom:1rem">Macro distribution</p>
+    <div class="macro-row">
+      <div class="macro-name">Protein</div>
+      <div class="bar-track"><div class="bar-fill" id="bar-p" style="background:var(--protein);width:0%"></div></div>
+      <div class="macro-info"><span class="macro-g" id="bar-p-g" style="color:var(--protein)">—</span><span class="macro-pct" id="bar-p-pct"></span></div>
+    </div>
+    <div class="macro-row">
+      <div class="macro-name">Carbs</div>
+      <div class="bar-track"><div class="bar-fill" id="bar-c" style="background:var(--carbs);width:0%"></div></div>
+      <div class="macro-info"><span class="macro-g" id="bar-c-g" style="color:var(--carbs)">—</span><span class="macro-pct" id="bar-c-pct"></span></div>
+    </div>
+    <div class="macro-row">
+      <div class="macro-name">Fats</div>
+      <div class="bar-track"><div class="bar-fill" id="bar-f" style="background:var(--fat);width:0%"></div></div>
+      <div class="macro-info"><span class="macro-g" id="bar-f-g" style="color:var(--fat)">—</span><span class="macro-pct" id="bar-f-pct"></span></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <p class="results-section-title">7-Day Meal Plan</p>
+  <div class="day-tabs" id="day-tabs"></div>
+  <div class="meals-grid" id="meals-grid"></div>
+
+  <div class="divider"></div>
+
+  <p class="results-section-title">Tips for your goal</p>
+  <div class="tips-grid" id="tips-grid"></div>
+</div>
+
+<script>
+// ---- Toggle button groups ----
+document.querySelectorAll('.toggle-group').forEach(group => {
+  group.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+});
+
+function getActive(groupId) {
+  return document.querySelector(`#${groupId} .toggle-btn.active`)?.dataset.val;
+}
+
+// ---- Mifflin-St Jeor BMR ----
+function calcBMR(weight, height, age, sex) {
+  if (sex === 'male') return 10 * weight + 6.25 * height - 5 * age + 5;
+  return 10 * weight + 6.25 * height - 5 * age - 161;
+}
+
+// ---- Goal multipliers ----
+function goalAdjust(tdee, goal) {
+  switch(goal) {
+    case 'lose':    return { kcal: Math.round(tdee * 0.8),   label: 'Fat loss (20% deficit)' };
+    case 'maintain':return { kcal: Math.round(tdee),          label: 'Maintenance' };
+    case 'gain':    return { kcal: Math.round(tdee * 1.1),   label: 'Muscle gain (10% surplus)' };
+    case 'recomp':  return { kcal: Math.round(tdee * 0.95),  label: 'Recomposition (5% deficit)' };
+    default:        return { kcal: Math.round(tdee),          label: 'Maintenance' };
+  }
+}
+
+// ---- Macro split by goal ----
+function calcMacros(kcal, weight, goal) {
+  let proteinPct, carbPct, fatPct;
+  switch(goal) {
+    case 'lose':    proteinPct=0.35; carbPct=0.37; fatPct=0.28; break;
+    case 'gain':    proteinPct=0.30; carbPct=0.45; fatPct=0.25; break;
+    case 'recomp':  proteinPct=0.38; carbPct=0.38; fatPct=0.24; break;
+    default:        proteinPct=0.30; carbPct=0.45; fatPct=0.25;
+  }
+  const protein = Math.round((kcal * proteinPct) / 4);
+  const carbs   = Math.round((kcal * carbPct)    / 4);
+  const fat     = Math.round((kcal * fatPct)     / 9);
+  return { protein, carbs, fat, proteinPct, carbPct, fatPct };
+}
+
+// ---- Meal plan database ----
+function getMealPlan(goal, diet, kcal, macros) {
+  const isVeg   = diet === 'vegetarian' || diet === 'vegan';
+  const isVegan = diet === 'vegan';
+  const isEgg   = diet === 'eggetarian';
+  const hasEgg  = !isVegan;
+
+  const mealKcal = [
+    Math.round(kcal * 0.22),
+    Math.round(kcal * 0.28),
+    Math.round(kcal * 0.15),
+    Math.round(kcal * 0.35)
+  ];
+
+  const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+  // Non-veg options
+  const nvBreakfasts = [
+    {name:'Egg white omelette + oats', desc:'4 egg whites + 2 whole eggs, spinach omelette. 60g oats with water.',p:42,c:52,f:9},
+    {name:'Scrambled eggs on toast', desc:'3 whole eggs scrambled, 2 slices whole wheat toast, sliced tomato.',p:28,c:48,f:14},
+    {name:'Egg bhurji + toast', desc:'3 eggs bhurji with onion, tomato, capsicum. 2 whole wheat toasts.',p:26,c:50,f:13},
+    {name:'Moong dal chilla + eggs', desc:'3 moong dal chilla with mint chutney, 2 hard boiled eggs.',p:34,c:50,f:10},
+    {name:'Whole wheat upma + eggs', desc:'1 cup wheat upma with vegetables, 3 boiled eggs (2 yolks).',p:30,c:55,f:12},
+    {name:'Poha with eggs', desc:'1.5 cups poha with peas and onion, 3 boiled eggs on the side.',p:32,c:60,f:10},
+    {name:'Oats porridge + boiled eggs', desc:'70g oats with milk, 3 boiled eggs, sprinkle of cinnamon.',p:36,c:58,f:11}
+  ];
+  const nvLunches = [
+    {name:'Grilled chicken rice bowl', desc:'180g grilled chicken breast, 150g cooked brown rice, cucumber-tomato salad, 1 tsp olive oil.',p:52,c:56,f:12},
+    {name:'Chicken keema with roti', desc:'150g lean chicken keema (cooked dry), 2 whole wheat rotis, onion salad.',p:48,c:54,f:14},
+    {name:'Tuna rice bowl', desc:'1 can tuna in water, 140g cooked rice, mixed greens, 1 tsp olive oil, lemon.',p:50,c:55,f:11},
+    {name:'Grilled chicken + sweet potato', desc:'180g grilled chicken, 1 medium boiled sweet potato, steamed broccoli.',p:52,c:48,f:10},
+    {name:'Grilled chicken salad wrap', desc:'160g grilled chicken, 2 whole wheat rotis, lettuce, tomato, mustard.',p:50,c:54,f:13},
+    {name:'Fish curry + rice', desc:'180g fish in tomato-onion curry (minimal oil), 140g rice, salad.',p:46,c:58,f:16},
+    {name:'Mutton/chicken biryani (light)', desc:'200g lean meat biryani, cucumber raita, 1 boiled egg.',p:50,c:62,f:20}
+  ];
+  const nvSnacks = [
+    {name:'Greek yogurt & banana', desc:'200g low-fat Greek yogurt, 1 medium banana, 10g chia seeds.',p:20,c:42,f:5},
+    {name:'Boiled eggs & fruit', desc:'3 boiled eggs (discard 1 yolk), 1 apple or guava.',p:22,c:28,f:10},
+    {name:'Paneer + fruit', desc:'80g low-fat paneer cubes lightly spiced, 1 orange or papaya.',p:16,c:36,f:9},
+    {name:'Greek yogurt & nuts', desc:'200g Greek yogurt, 10 almonds, 1 tsp honey.',p:20,c:28,f:14},
+    {name:'Cottage cheese & mango', desc:'100g low-fat cottage cheese, 1 small mango or banana.',p:14,c:40,f:5},
+    {name:'Protein smoothie', desc:'1 banana, 200ml milk, 2 egg whites blended, pinch of cinnamon.',p:20,c:40,f:4},
+    {name:'Fruits & yogurt', desc:'200g Greek yogurt, mixed seasonal fruits (papaya, apple, guava).',p:16,c:40,f:3}
+  ];
+  const nvDinners = [
+    {name:'Baked fish with veggies & sweet potato', desc:'200g baked tilapia or pomfret, 1 medium sweet potato, sautéed broccoli and beans.',p:56,c:44,f:18},
+    {name:'Prawn stir-fry with rice', desc:'200g prawns stir-fried in 1 tsp oil with vegetables, 130g cooked white rice.',p:50,c:62,f:18},
+    {name:'Chicken curry (light) + roti', desc:'150g chicken in tomato-onion gravy (minimal oil), 2 whole wheat rotis.',p:48,c:52,f:20},
+    {name:'Egg curry + rice', desc:'4 whole eggs in onion-tomato curry, 140g cooked rice, cucumber raita.',p:36,c:64,f:22},
+    {name:'Baked chicken + quinoa', desc:'200g baked skinless chicken thigh, 130g cooked quinoa, roasted capsicum & onion.',p:54,c:44,f:24},
+    {name:'Chicken tikka + roti', desc:'200g chicken tikka (grilled, minimal oil marinade), 2 whole wheat rotis, onion salad.',p:52,c:48,f:18},
+    {name:'Grilled fish + veggies + roti', desc:'200g grilled surmai or rohu, 1 whole wheat roti, sautéed greens.',p:54,c:38,f:22}
+  ];
+
+  // Veg options
+  const vBreakfasts = [
+    {name:'Moong dal chilla + paneer', desc:'3 moong dal chilla, 80g paneer bhurji, mint chutney.',p:28,c:50,f:10},
+    {name:'Oats porridge + nuts', desc:'70g oats with milk, 1 tbsp almond butter, banana slices.',p:18,c:60,f:12},
+    {name:'Whole wheat toast + peanut butter', desc:'2 toasts, 2 tbsp peanut butter, 1 glass milk or soy milk.',p:22,c:52,f:14},
+    {name:'Poha with peanuts', desc:'1.5 cups poha, handful roasted peanuts, vegetables.',p:16,c:58,f:10},
+    {name:'Idli + sambar', desc:'4 idlis with bowl of dal sambar and coconut chutney.',p:14,c:62,f:6},
+    {name:'Upma + coconut', desc:'1.5 cups wheat upma with vegetables, 2 tbsp grated coconut.',p:14,c:56,f:10},
+    {name:'Paratha + curd', desc:'2 whole wheat parathas (dry), 150g plain curd, cucumber.',p:16,c:54,f:12}
+  ];
+  const vLunches = [
+    {name:'Rajma rice', desc:'1 cup rajma curry, 150g cooked rice, onion salad.',p:20,c:70,f:8},
+    {name:'Palak paneer + roti', desc:'150g paneer in spinach gravy, 2 whole wheat rotis.',p:28,c:52,f:16},
+    {name:'Chole + rice', desc:'1 cup chole (chickpeas) masala, 140g rice, sliced onion.',p:18,c:68,f:9},
+    {name:'Tofu stir-fry + quinoa', desc:'200g tofu stir-fried with vegetables, 130g cooked quinoa.',p:26,c:48,f:14},
+    {name:'Dal tadka + rice + sabzi', desc:'1 cup toor dal, 140g rice, 1 vegetable sabzi (no excess oil).',p:18,c:66,f:8},
+    {name:'Paneer wrap', desc:'100g paneer tikka, 2 whole wheat rotis, salad.',p:26,c:52,f:15},
+    {name:'Mixed dal + roti', desc:'1 cup mixed dal, 2 rotis, raita, salad.',p:20,c:58,f:10}
+  ];
+  const vSnacks = [
+    {name:'Greek yogurt & banana', desc:'200g low-fat Greek yogurt, 1 medium banana, 10g chia seeds.',p:20,c:42,f:5},
+    {name:'Roasted chana & fruit', desc:'40g roasted chickpeas, 1 fruit (apple/guava/orange).',p:10,c:40,f:4},
+    {name:'Paneer cubes', desc:'80g low-fat paneer cubes with black pepper and lemon.',p:16,c:4,f:9},
+    {name:'Nuts & seeds mix', desc:'15 almonds, 1 tbsp pumpkin seeds, 1 tbsp sunflower seeds.',p:8,c:10,f:16},
+    {name:'Smoothie', desc:'1 banana, 200ml milk/soy milk, 1 tbsp almond butter.',p:12,c:44,f:10},
+    {name:'Sprouts salad', desc:'1 cup mixed sprouted beans with lemon, onion, tomato.',p:12,c:36,f:3},
+    {name:'Fruit bowl', desc:'Mixed seasonal fruits — papaya, watermelon, apple, pomegranate.',p:4,c:48,f:1}
+  ];
+  const vDinners = [
+    {name:'Tofu & vegetable curry + rice', desc:'200g tofu in tomato-onion curry, 130g cooked rice.',p:24,c:62,f:12},
+    {name:'Paneer bhurji + roti', desc:'150g paneer bhurji (scrambled style), 2 whole wheat rotis.',p:30,c:50,f:18},
+    {name:'Lentil soup + bread', desc:'Big bowl of masoor/moong dal soup, 2 slices whole wheat bread.',p:20,c:60,f:6},
+    {name:'Mixed vegetable curry + quinoa', desc:'Thick mixed vegetable curry, 130g cooked quinoa.',p:16,c:58,f:10},
+    {name:'Chana masala + roti', desc:'1 cup chana masala, 2 whole wheat rotis, onion salad.',p:18,c:62,f:10},
+    {name:'Soy chunk curry + rice', desc:'100g soy chunks in masala, 140g cooked rice, raita.',p:26,c:64,f:8},
+    {name:'Dal makhani (light) + roti', desc:'1 cup light dal makhani, 2 whole wheat rotis.',p:18,c:56,f:14}
+  ];
+
+  const useVeg = isVeg;
+  const B = useVeg ? vBreakfasts : nvBreakfasts;
+  const L = useVeg ? vLunches   : nvLunches;
+  const S = useVeg ? vSnacks    : nvSnacks;
+  const D = useVeg ? vDinners   : nvDinners;
+
+  return days.map((day, i) => ({
+    label: day,
+    meals: [
+      { tag: 'Meal 1 — Breakfast',     kcal: mealKcal[0], ...B[i] },
+      { tag: 'Meal 2 — Lunch',         kcal: mealKcal[1], ...L[i] },
+      { tag: 'Meal 3 — Snack',         kcal: mealKcal[2], ...S[i] },
+      { tag: 'Meal 4 — Dinner',        kcal: mealKcal[3], ...D[i] }
+    ]
+  }));
+}
+
+function getTips(goal) {
+  const base = [
+    { icon: '💧', title: 'Hydration', text: 'Drink 3–4L of water daily. Start your morning with 500ml before breakfast.' },
+    { icon: '😴', title: 'Sleep quality', text: 'Aim for 7–9 hours of sleep. Poor sleep elevates cortisol and sabotages fat loss and muscle gain.' },
+    { icon: '📊', title: 'Track progress', text: 'Weigh yourself weekly (same time, morning). Adjust calories if no change after 2 weeks.' }
+  ];
+  if (goal === 'lose') return [
+    { icon: '🍗', title: 'Protein first', text: 'Eat protein at the start of every meal — it blunts hunger hormones and preserves muscle.' },
+    { icon: '⏱', title: 'Meal timing', text: 'Eat your carbs around your workout window. Keep dinner lighter, especially on rest days.' },
+    ...base.slice(0, 1)
+  ];
+  if (goal === 'gain') return [
+    { icon: '🏋️', title: 'Post-workout nutrition', text: 'Have protein + carbs within 45 min of training. This is your muscle-building window.' },
+    { icon: '🍚', title: 'Carb-loading', text: 'Front-load carbs in your pre and post workout meals for best performance and recovery.' },
+    ...base.slice(2)
+  ];
+  return base;
+}
+
+// ---- MAIN CALCULATE ----
+let mealPlanData = [];
+let currentDay = 0;
+
+function calculate() {
+  const age    = parseFloat(document.getElementById('age').value);
+  const weight = parseFloat(document.getElementById('weight').value);
+  const height = parseFloat(document.getElementById('height').value);
+  const sex    = document.getElementById('sex').value;
+  const actMul = parseFloat(getActive('activity-group'));
+  const goal   = getActive('goal-group');
+  const diet   = getActive('diet-group');
+
+  if (!age || !weight || !height) {
+    alert('Please fill in your age, weight, and height.');
+    return;
+  }
+
+  const bmr  = calcBMR(weight, height, age, sex);
+  const tdee = bmr * actMul;
+  const { kcal, label } = goalAdjust(tdee, goal);
+  const macros = calcMacros(kcal, weight, goal);
+  const { protein, carbs, fat, proteinPct, carbPct, fatPct } = macros;
+
+  // Fill stats
+  document.getElementById('r-name').textContent = `a ${age}-year-old ${sex}`;
+  document.getElementById('r-kcal').textContent   = kcal.toLocaleString();
+  document.getElementById('r-protein').textContent = protein;
+  document.getElementById('r-carbs').textContent   = carbs;
+  document.getElementById('r-fats').textContent    = fat;
+
+  document.getElementById('bmr-note').innerHTML =
+    `BMR: <strong>${Math.round(bmr)} kcal</strong> &nbsp;·&nbsp; TDEE: <strong>${Math.round(tdee)} kcal</strong> &nbsp;·&nbsp; Goal adjustment: <strong>${label}</strong>. Protein set at ~${Math.round(protein/weight*10)/10}g per kg bodyweight.`;
+
+  // Bars
+  const pPct = Math.round(proteinPct*100);
+  const cPct = Math.round(carbPct*100);
+  const fPct = Math.round(fatPct*100);
+
+  setTimeout(() => {
+    document.getElementById('bar-p').style.width = pPct + '%';
+    document.getElementById('bar-c').style.width = cPct + '%';
+    document.getElementById('bar-f').style.width = fPct + '%';
+  }, 100);
+
+  document.getElementById('bar-p-g').textContent = protein + 'g';
+  document.getElementById('bar-c-g').textContent = carbs   + 'g';
+  document.getElementById('bar-f-g').textContent = fat     + 'g';
+  document.getElementById('bar-p-pct').textContent = pPct + '%';
+  document.getElementById('bar-c-pct').textContent = cPct + '%';
+  document.getElementById('bar-f-pct').textContent = fPct + '%';
+
+  // Meal plan
+  mealPlanData = getMealPlan(goal, diet, kcal, macros);
+  currentDay = 0;
+
+  const tabsEl = document.getElementById('day-tabs');
+  tabsEl.innerHTML = mealPlanData.map((d, i) =>
+    `<button class="day-tab ${i===0?'active':''}" onclick="selectDay(${i})">${d.label.slice(0,3)}</button>`
+  ).join('');
+
+  renderDay(0);
+
+  // Tips
+  const tips = getTips(goal);
+  document.getElementById('tips-grid').innerHTML = tips.map(t =>
+    `<div class="tip-card"><span class="tip-icon">${t.icon}</span><div class="tip-title">${t.title}</div><div class="tip-text">${t.text}</div></div>`
+  ).join('');
+
+  // Show results
+  const resultsEl = document.getElementById('results');
+  resultsEl.style.display = 'block';
+  resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function selectDay(idx) {
+  currentDay = idx;
+  document.querySelectorAll('.day-tab').forEach((t, i) => {
+    t.classList.toggle('active', i === idx);
+  });
+  renderDay(idx);
+}
+
+function renderDay(idx) {
+  const day = mealPlanData[idx];
+  document.getElementById('meals-grid').innerHTML = day.meals.map(m => `
+    <div class="meal-card">
+      <div class="meal-header">
+        <span class="meal-tag">${m.tag}</span>
+        <span class="meal-kcal">~${m.kcal} kcal</span>
+      </div>
+      <div class="meal-name">${m.name}</div>
+      <div class="meal-desc">${m.desc}</div>
+      <div class="meal-macros">
+        <div class="m-pill">Protein <strong>${m.p}g</strong></div>
+        <div class="m-pill">Carbs <strong>${m.c}g</strong></div>
+        <div class="m-pill">Fat <strong>${m.f}g</strong></div>
+      </div>
+    </div>
+  `).join('');
+}
+</script>
+</body>
+</html>
